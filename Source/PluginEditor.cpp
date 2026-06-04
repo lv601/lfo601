@@ -160,11 +160,11 @@ void WaveformView::paint (juce::Graphics& g)
     g.setFont (smallFont());
     g.drawText ("OUTPUT", 10, 2, 90, 16, juce::Justification::left);
 
-    const int waveform = static_cast<int> (*processor.parameters.getRawParameterValue ("waveform"));
-    const int polarity = static_cast<int> (*processor.parameters.getRawParameterValue ("polarity"));
-    const auto depth = *processor.parameters.getRawParameterValue ("depth");
-    const auto offset = *processor.parameters.getRawParameterValue ("offset");
-    const auto phaseDeg = *processor.parameters.getRawParameterValue ("phase");
+    const int waveform = static_cast<int> (processor.parameters.getRawParameterValue ("waveform")->load() + 0.5f);
+    const int polarity = static_cast<int> (processor.parameters.getRawParameterValue ("polarity")->load() + 0.5f);
+    const auto depth = processor.parameters.getRawParameterValue ("depth")->load();
+    const auto offset = processor.parameters.getRawParameterValue ("offset")->load();
+    const auto phaseDeg = processor.parameters.getRawParameterValue ("phase")->load();
 
     constexpr double cycles = 3.0;
     juce::Path path;
@@ -429,7 +429,7 @@ void LFOToolAudioProcessorEditor::timerCallback()
 {
     updateButtonStates();
 
-    const auto phase = *processor.parameters.getRawParameterValue ("phase");
+    const auto phase = processor.parameters.getRawParameterValue ("phase")->load();
     phaseValueLabel.setText (juce::String (juce::roundToInt (phase)) + "°", juce::dontSendNotification);
 
     bpmValueLabel.setText (juce::String (juce::roundToInt (processor.getHostBpm())), juce::dontSendNotification);
@@ -452,8 +452,8 @@ void LFOToolAudioProcessorEditor::paint (juce::Graphics& g)
     g.setColour (panel.withAlpha (0.7f));
     g.fillRect (juce::Rectangle<int> (getWidth() - 190, 39, 180, getHeight() - 49));
     g.setColour (border.withAlpha (0.8f));
-    g.drawVerticalLine (getWidth() - 190, 39, getHeight() - 10);
-    g.drawHorizontalLine (39, 10, getWidth() - 10);
+    g.drawVerticalLine (getWidth() - 190, 39.0f, static_cast<float> (getHeight() - 10));
+    g.drawHorizontalLine (39, 10.0f, static_cast<float> (getWidth() - 10));
 
     g.setFont (titleFont());
     g.setColour (yellow);

@@ -128,9 +128,9 @@ void LFOToolAudioProcessor::updateTransportInfo()
 {
     bool playing = false;
 
-    if (auto* playHead = getPlayHead())
+    if (auto* currentPlayHead = getPlayHead())
     {
-        if (auto pos = playHead->getPosition())
+        if (auto pos = currentPlayHead->getPosition())
         {
             if (auto bpm = pos->getBpm())
                 hostBpm.store (static_cast<float> (*bpm));
@@ -139,7 +139,7 @@ void LFOToolAudioProcessor::updateTransportInfo()
         }
     }
 
-    const auto retrig = static_cast<int> (*parameters.getRawParameterValue ("retrig"));
+    const auto retrig = static_cast<int> (parameters.getRawParameterValue ("retrig")->load() + 0.5f);
     if (retrig == 1 && playing && ! lastTransportPlaying)
         resetLfo();
 
@@ -148,10 +148,10 @@ void LFOToolAudioProcessor::updateTransportInfo()
 
 float LFOToolAudioProcessor::getRateHzFromParameters() const
 {
-    const auto syncDivision = static_cast<int> (*parameters.getRawParameterValue ("syncDivision"));
+    const auto syncDivision = static_cast<int> (parameters.getRawParameterValue ("syncDivision")->load() + 0.5f);
 
     if (syncDivision == free)
-        return *parameters.getRawParameterValue ("rate");
+        return parameters.getRawParameterValue ("rate")->load();
 
     const float bpm = juce::jmax (1.0f, hostBpm.load());
     const float beatsPerCycle = beatsPerCycleForDivision (syncDivision);
@@ -251,14 +251,14 @@ void LFOToolAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce
     updateTransportInfo();
 
     const auto rateHz   = getRateHzFromParameters();
-    const auto depth    = *parameters.getRawParameterValue ("depth");
-    const auto offset   = *parameters.getRawParameterValue ("offset");
-    const auto smooth   = *parameters.getRawParameterValue ("smooth");
-    const auto phaseDeg = *parameters.getRawParameterValue ("phase");
-    const auto waveform = static_cast<int> (*parameters.getRawParameterValue ("waveform"));
-    const auto polarity = static_cast<int> (*parameters.getRawParameterValue ("polarity"));
-    const auto mode     = static_cast<int> (*parameters.getRawParameterValue ("mode"));
-    const auto running  = *parameters.getRawParameterValue ("running") > 0.5f;
+    const auto depth    = parameters.getRawParameterValue ("depth")->load();
+    const auto offset   = parameters.getRawParameterValue ("offset")->load();
+    const auto smooth   = parameters.getRawParameterValue ("smooth")->load();
+    const auto phaseDeg = parameters.getRawParameterValue ("phase")->load();
+    const auto waveform = static_cast<int> (parameters.getRawParameterValue ("waveform")->load() + 0.5f);
+    const auto polarity = static_cast<int> (parameters.getRawParameterValue ("polarity")->load() + 0.5f);
+    const auto mode     = static_cast<int> (parameters.getRawParameterValue ("mode")->load() + 0.5f);
+    const auto running  = parameters.getRawParameterValue ("running")->load() > 0.5f;
 
     const auto totalInputChannels  = getTotalNumInputChannels();
     const auto totalOutputChannels = getTotalNumOutputChannels();
