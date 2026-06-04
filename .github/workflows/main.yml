@@ -5,6 +5,12 @@ on:
   push:
     branches: [ main, master ]
 
+# GitHub is migrating JavaScript actions from Node 20 to Node 24.
+# This opts in early and removes the Node 20 deprecation warning for actions
+# such as actions/checkout@v4 on runners where Node 24 is available.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build-windows-vst3:
     runs-on: windows-2022
