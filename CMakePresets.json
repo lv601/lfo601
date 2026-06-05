@@ -1,0 +1,41 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 22,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "vs2022-x64",
+      "displayName": "Visual Studio 2022 x64",
+      "description": "Configure with the Visual Studio 2022 generator for 64-bit VST3 builds.",
+      "generator": "Visual Studio 17 2022",
+      "architecture": "x64",
+      "binaryDir": "${sourceDir}/build/vs2022-x64",
+      "cacheVariables": {
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "release-vst3",
+      "displayName": "Release VST3",
+      "configurePreset": "vs2022-x64",
+      "configuration": "Release",
+      "targets": [
+        "LFOzTool_VST3"
+      ]
+    },
+    {
+      "name": "debug-vst3",
+      "displayName": "Debug VST3",
+      "configurePreset": "vs2022-x64",
+      "configuration": "Debug",
+      "targets": [
+        "LFOzTool_VST3"
+      ]
+    }
+  ]
+}
