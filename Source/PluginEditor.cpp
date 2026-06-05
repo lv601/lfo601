@@ -106,6 +106,17 @@ void RetroLookAndFeel::drawButtonBackground (juce::Graphics& g, juce::Button& b,
     g.drawRoundedRectangle (area, 7.0f, on ? 1.4f : 1.0f);
 }
 
+void RetroLookAndFeel::drawButtonText (juce::Graphics& g, juce::TextButton& button,
+                                       bool, bool)
+{
+    auto area = button.getLocalBounds().reduced (3, 2);
+    const auto maxHeight = juce::jmax (9.0f, static_cast<float> (button.getHeight()) * 0.34f);
+    g.setFont (buttonFont().withHeight (juce::jmin (13.0f, maxHeight)));
+    g.setColour (button.findColour (button.getToggleState() ? juce::TextButton::textColourOnId
+                                                            : juce::TextButton::textColourOffId));
+    g.drawFittedText (button.getButtonText(), area, juce::Justification::centred, 2, 0.85f);
+}
+
 void RetroLookAndFeel::drawLinearSlider (juce::Graphics& g, int x, int y, int width, int height,
                                          float sliderPos, float, float,
                                          const juce::Slider::SliderStyle, juce::Slider& slider)
@@ -251,6 +262,19 @@ LFOToolAudioProcessorEditor::LFOToolAudioProcessorEditor (LFOToolAudioProcessor&
     offsetSlider.textFromValueFunction = [] (double v) { return juce::String (v, 2); };
     smoothSlider.textFromValueFunction = [] (double v) { return juce::String (juce::roundToInt (v * 100.0)) + "%"; };
 
+    auto setupValueLabel = [] (juce::Label& label)
+    {
+        label.setColour (juce::Label::textColourId, yellow);
+        label.setFont (smallFont());
+        label.setJustificationType (juce::Justification::centred);
+    };
+
+    for (auto* label : { &rateLabel, &depthLabel, &offsetLabel, &smoothLabel })
+    {
+        setupValueLabel (*label);
+        addAndMakeVisible (*label);
+    }
+
     phaseSlider.setSliderStyle (juce::Slider::LinearHorizontal);
     phaseSlider.setTextBoxStyle (juce::Slider::NoTextBox, false, 0, 0);
     addAndMakeVisible (phaseSlider);
@@ -272,7 +296,7 @@ LFOToolAudioProcessorEditor::LFOToolAudioProcessorEditor (LFOToolAudioProcessor&
     cvOutValueLabel.setJustificationType (juce::Justification::right);
     addAndMakeVisible (cvOutValueLabel);
 
-    const juce::StringArray waveTexts { "∿", "⌁", "╱", "╲", "▱", "⌁" };
+    const juce::StringArray waveTexts { "SIN", "TRI", "SAW", "REV", "SQR", "S&H" };
     for (size_t i = 0; i < waveformButtons.size(); ++i)
     {
         configureButton (waveformButtons[i], waveTexts[static_cast<int> (i)]);
@@ -303,7 +327,7 @@ LFOToolAudioProcessorEditor::LFOToolAudioProcessorEditor (LFOToolAudioProcessor&
     oneShotButton.onClick  = [this] { setChoiceParameter ("mode", 1); processor.resetLfo(); };
     pingPongButton.onClick = [this] { setChoiceParameter ("mode", 2); processor.resetLfo(); };
 
-    configureButton (stopButton, "■ STOP");
+    configureButton (stopButton, "STOP");
     stopButton.onClick = [this]
     {
         const auto running = getBool ("running");
@@ -334,14 +358,23 @@ LFOToolAudioProcessorEditor::~LFOToolAudioProcessorEditor()
     setLookAndFeel (nullptr);
 }
 
+void LFOToolAudioProcessorEditor::setScaleFactor (float newScale)
+{
+    // FL Studio can report a host scale factor even though the wrapper already
+    // allocates the editor at the requested pixel size.  The default JUCE
+    // behaviour applies an additional transform, which makes controls appear
+    // oversized and clipped in the FL wrapper.  Keep the editor at 1:1 pixels.
+    juce::ignoreUnused (newScale);
+    setTransform (juce::AffineTransform());
+}
+
 void LFOToolAudioProcessorEditor::configureKnob (juce::Slider& s, juce::Label& label, const juce::String& name)
 {
     s.setSliderStyle (juce::Slider::RotaryHorizontalVerticalDrag);
     s.setRotaryParameters (juce::MathConstants<float>::pi * 1.24f,
                            juce::MathConstants<float>::pi * 2.76f,
                            true);
-    s.setTextBoxStyle (juce::Slider::TextBoxBelow, false, 70, 16);
-    s.setColour (juce::Slider::textBoxTextColourId, yellow);
+    s.setTextBoxStyle (juce::Slider::NoTextBox, false, 0, 0);
     addAndMakeVisible (s);
 
     label.setText (name, juce::dontSendNotification);
@@ -421,7 +454,7 @@ void LFOToolAudioProcessorEditor::updateButtonStates()
     pingPongButton.setToggleState (mode == 2, juce::dontSendNotification);
 
     const auto running = getBool ("running");
-    stopButton.setButtonText (running ? "■ STOP" : "▶ START");
+    stopButton.setButtonText (running ? "STOP" : "START");
     stopButton.setToggleState (! running, juce::dontSendNotification);
 }
 
@@ -430,7 +463,12 @@ void LFOToolAudioProcessorEditor::timerCallback()
     updateButtonStates();
 
     const auto phase = processor.parameters.getRawParameterValue ("phase")->load();
-    phaseValueLabel.setText (juce::String (juce::roundToInt (phase)) + "°", juce::dontSendNotification);
+    phaseValueLabel.setText (juce::String (juce::roundToInt (phase)) + " deg", juce::dontSendNotification);
+
+    rateLabel.setText   (juce::String (rateSlider.getValue(), 2) + " Hz", juce::dontSendNotification);
+    depthLabel.setText  (juce::String (juce::roundToInt (depthSlider.getValue() * 100.0)) + "%", juce::dontSendNotification);
+    offsetLabel.setText (juce::String (offsetSlider.getValue(), 2), juce::dontSendNotification);
+    smoothLabel.setText (juce::String (juce::roundToInt (smoothSlider.getValue() * 100.0)) + "%", juce::dontSendNotification);
 
     bpmValueLabel.setText (juce::String (juce::roundToInt (processor.getHostBpm())), juce::dontSendNotification);
 
@@ -494,10 +532,15 @@ void LFOToolAudioProcessorEditor::resized()
     offsetSlider.setBounds (centres[2] - knobSize / 2, knobY, knobSize, 78);
     smoothSlider.setBounds (centres[3] - knobSize / 2, knobY, knobSize, 78);
 
-    rateNameLabel.setBounds   (centres[0] - 36, 293, 72, 14);
-    depthNameLabel.setBounds  (centres[1] - 36, 293, 72, 14);
-    offsetNameLabel.setBounds (centres[2] - 36, 293, 72, 14);
-    smoothNameLabel.setBounds (centres[3] - 36, 293, 72, 14);
+    rateNameLabel.setBounds   (centres[0] - 36, 294, 72, 14);
+    depthNameLabel.setBounds  (centres[1] - 36, 294, 72, 14);
+    offsetNameLabel.setBounds (centres[2] - 36, 294, 72, 14);
+    smoothNameLabel.setBounds (centres[3] - 36, 294, 72, 14);
+
+    rateLabel.setBounds   (centres[0] - 42, 310, 84, 14);
+    depthLabel.setBounds  (centres[1] - 42, 310, 84, 14);
+    offsetLabel.setBounds (centres[2] - 42, 310, 84, 14);
+    smoothLabel.setBounds (centres[3] - 42, 310, 84, 14);
 
     phaseSlider.setBounds (78, 332, rightX - 115, 28);
     phaseValueLabel.setBounds (rightX - 45, 336, 32, 14);
