@@ -1,4 +1,4 @@
-# LFO Tool — VST3 for FL Studio / Windows 11
+# LFOz Tool — VST3 for FL Studio / Windows 11
 
 ![lfotool.png](lfotool.png)
 
@@ -109,3 +109,4 @@ ui-reference-lfotool.png
 .github/workflows/windows-vst3.yml
 ```
 
+Vibed by lv601
