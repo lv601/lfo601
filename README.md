@@ -1,5 +1,7 @@
 # LFO Tool — VST3 for FL Studio / Windows 11
 
+![lfotool.png](lfotool.png)
+
 A JUCE-based VST3 modulation LFO inspired by Ableton Max for Live CV Tools.  
 The included UI follows the supplied `lfotool.png` reference: dark CV-mod style panel, yellow waveform display, shape buttons, rotary controls, sync row, CV output meter and right-side mode/polarity/retrig controls.
 
@@ -107,6 +109,3 @@ ui-reference-lfotool.png
 .github/workflows/windows-vst3.yml
 ```
 
-## Differences from the first Claude version
-
-The uploaded raw VST3/CLAP proof-of-concept was kept as a reference, but the implementation was moved to JUCE because a custom VST3 editor is significantly faster and safer to build/maintain there. DSP behaviour is based on the original code and extended with UI-linked parameters, tempo sync, mode buttons, retrigger and state persistence.
