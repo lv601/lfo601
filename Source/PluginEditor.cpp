@@ -101,6 +101,12 @@ void RetroLookAndFeel::drawButtonBackground (juce::Graphics& g, juce::Button& b,
     auto area = b.getLocalBounds().toFloat().reduced (0.5f);
     const bool on = b.getToggleState();
 
+    if (on)
+    {
+        g.setColour (yellow.withAlpha (0.10f));
+        g.fillRoundedRectangle (area.expanded (2.0f), 8.5f);
+    }
+
     g.setColour (on ? juce::Colour (0xff22232a) : panel);
     if (down)
         g.setColour (juce::Colour (0xff2b2c34));
@@ -114,12 +120,90 @@ void RetroLookAndFeel::drawButtonBackground (juce::Graphics& g, juce::Button& b,
 
 void RetroLookAndFeel::drawButtonText (juce::Graphics& g, juce::TextButton& button, bool, bool)
 {
-    auto area = button.getLocalBounds().reduced (3, 2);
-    const auto maxHeight = juce::jmax (9.0f, static_cast<float> (button.getHeight()) * 0.34f);
-    g.setFont (buttonFont().withHeight (juce::jmin (13.0f, maxHeight)));
-    g.setColour (button.findColour (button.getToggleState() ? juce::TextButton::textColourOnId
-                                                            : juce::TextButton::textColourOffId));
-    g.drawFittedText (button.getButtonText(), area, juce::Justification::centred, 2, 0.85f);
+    const auto buttonName = button.getName();
+    const bool on = button.getToggleState();
+
+    if (buttonName.startsWith ("wave"))
+    {
+        const int idx = buttonName.fromFirstOccurrenceOf ("wave", false, false).getIntValue();
+        auto a = button.getLocalBounds().toFloat().reduced (9.0f, 8.0f);
+        const auto cx = a.getCentreX();
+        const auto cy = a.getCentreY();
+        const auto w = a.getWidth();
+        const auto h = a.getHeight();
+
+        g.setColour ((on ? yellow : whiteText).withAlpha (on ? 1.0f : 0.88f));
+        juce::Path icon;
+
+        switch (idx)
+        {
+            case 0: // sine
+                for (int i = 0; i <= 32; ++i)
+                {
+                    const auto t = static_cast<float> (i) / 32.0f;
+                    const auto x = a.getX() + t * w;
+                    const auto y = cy - std::sin (t * juce::MathConstants<float>::twoPi) * h * 0.34f;
+                    i == 0 ? icon.startNewSubPath (x, y) : icon.lineTo (x, y);
+                }
+                break;
+            case 1: // triangle
+                icon.startNewSubPath (a.getX(), a.getBottom() - h * 0.18f);
+                icon.lineTo (cx, a.getY() + h * 0.18f);
+                icon.lineTo (a.getRight(), a.getBottom() - h * 0.18f);
+                break;
+            case 2: // saw
+                icon.startNewSubPath (a.getX(), a.getBottom() - h * 0.15f);
+                icon.lineTo (a.getRight(), a.getY() + h * 0.15f);
+                icon.lineTo (a.getRight(), a.getBottom() - h * 0.15f);
+                break;
+            case 3: // reverse saw
+                icon.startNewSubPath (a.getX(), a.getY() + h * 0.15f);
+                icon.lineTo (a.getRight(), a.getBottom() - h * 0.15f);
+                icon.lineTo (a.getRight(), a.getY() + h * 0.15f);
+                break;
+            case 4: // square
+                icon.startNewSubPath (a.getX(), a.getBottom() - h * 0.20f);
+                icon.lineTo (a.getX() + w * 0.18f, a.getBottom() - h * 0.20f);
+                icon.lineTo (a.getX() + w * 0.18f, a.getY() + h * 0.20f);
+                icon.lineTo (a.getX() + w * 0.62f, a.getY() + h * 0.20f);
+                icon.lineTo (a.getX() + w * 0.62f, a.getBottom() - h * 0.20f);
+                icon.lineTo (a.getRight(), a.getBottom() - h * 0.20f);
+                break;
+            case 5: // sample & hold
+                icon.startNewSubPath (a.getX(), a.getBottom() - h * 0.25f);
+                icon.lineTo (a.getX() + w * 0.22f, a.getBottom() - h * 0.25f);
+                icon.lineTo (a.getX() + w * 0.22f, a.getY() + h * 0.28f);
+                icon.lineTo (a.getX() + w * 0.52f, a.getY() + h * 0.28f);
+                icon.lineTo (a.getX() + w * 0.52f, a.getCentreY());
+                icon.lineTo (a.getRight(), a.getCentreY());
+                break;
+            case 6: // custom curve
+                icon.startNewSubPath (a.getX(), a.getBottom() - h * 0.22f);
+                icon.cubicTo (a.getX() + w * 0.25f, a.getY() - h * 0.05f,
+                              a.getX() + w * 0.70f, a.getBottom() + h * 0.05f,
+                              a.getRight(), a.getY() + h * 0.24f);
+                break;
+            default:
+                break;
+        }
+
+        if (on)
+        {
+            g.setColour (yellow.withAlpha (0.22f));
+            g.strokePath (icon, juce::PathStrokeType (5.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+            g.setColour (yellow);
+        }
+
+        g.strokePath (icon, juce::PathStrokeType (2.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+        return;
+    }
+
+    auto area = button.getLocalBounds().reduced (4, 2);
+    const auto text = button.getButtonText();
+    const auto fontHeight = text.length() > 6 ? 10.5f : 12.0f;
+    g.setFont (buttonFont().withHeight (fontHeight));
+    g.setColour (button.findColour (on ? juce::TextButton::textColourOnId : juce::TextButton::textColourOffId));
+    g.drawFittedText (text, area, juce::Justification::centred, 2, 0.92f);
 }
 
 void RetroLookAndFeel::drawLinearSlider (juce::Graphics& g, int x, int y, int width, int height,
@@ -264,15 +348,20 @@ void CurveEditor::paint (juce::Graphics& g)
             path.lineTo (x, y);
     }
 
-    g.setColour (yellow.withAlpha (0.22f));
-    g.strokePath (path, juce::PathStrokeType (5.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+    g.setColour (yellow.withAlpha (0.10f));
+    g.strokePath (path, juce::PathStrokeType (11.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+    g.setColour (yellow.withAlpha (0.26f));
+    g.strokePath (path, juce::PathStrokeType (6.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
     g.setColour (yellow);
-    g.strokePath (path, juce::PathStrokeType (1.7f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+    g.strokePath (path, juce::PathStrokeType (1.8f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
 
     for (int i = 0; i < processor.getCurvePointCount(); ++i)
     {
         const auto p = pointToPixel (processor.getCurvePoint (i));
-        g.setColour (i == selectedPoint ? yellow : mint);
+        const auto c = i == selectedPoint ? yellow : mint;
+        g.setColour (c.withAlpha (0.20f));
+        g.fillEllipse (p.x - 8.0f, p.y - 8.0f, 16.0f, 16.0f);
+        g.setColour (c);
         g.fillEllipse (p.x - 4.5f, p.y - 4.5f, 9.0f, 9.0f);
         g.setColour (panel2);
         g.drawEllipse (p.x - 4.5f, p.y - 4.5f, 9.0f, 9.0f, 1.0f);
@@ -358,7 +447,7 @@ LFOToolAudioProcessorEditor::LFOToolAudioProcessorEditor (LFOToolAudioProcessor&
     : AudioProcessorEditor (&p), processor (p), curveEditor (p), levelMeter (p)
 {
     setLookAndFeel (&lookAndFeel);
-    setSize (760, 610);
+    setSize (760, 630);
 
     addAndMakeVisible (curveEditor);
     addAndMakeVisible (levelMeter);
@@ -406,6 +495,7 @@ LFOToolAudioProcessorEditor::LFOToolAudioProcessorEditor (LFOToolAudioProcessor&
     for (size_t i = 0; i < waveformButtons.size(); ++i)
     {
         configureButton (waveformButtons[i], waveTexts[static_cast<int> (i)]);
+        waveformButtons[i].setName ("wave" + juce::String (static_cast<int> (i)));
         waveformButtons[i].onClick = [this, i] { setChoiceParameter ("waveform", static_cast<int> (i)); };
     }
 
@@ -649,9 +739,9 @@ void LFOToolAudioProcessorEditor::paint (juce::Graphics& g)
 
     drawTinyLabel (g, "SHAPE", 27, 222);
     drawTinyLabel (g, "CURVE", 27, 262);
-    drawTinyLabel (g, "PHASE", 27, 395);
-    drawTinyLabel (g, "SYNC", 27, 426);
-    drawTinyLabel (g, "CV OUT", 27, 545);
+    drawTinyLabel (g, "PHASE", 27, 416);
+    drawTinyLabel (g, "SYNC", 27, 447);
+    drawTinyLabel (g, "CV OUT", 27, 565);
 
     const int rx = rightX + 12;
     drawTinyLabel (g, "LEVEL", rx, 51);
@@ -660,7 +750,7 @@ void LFOToolAudioProcessorEditor::paint (juce::Graphics& g)
     drawTinyLabel (g, "PHASE LOCK", rx, 245);
     drawTinyLabel (g, "OUTPUT", rx, 313);
     drawTinyLabel (g, "MODE", rx, 381);
-    drawTinyLabel (g, "BPM", rx, 545);
+    drawTinyLabel (g, "BPM", rx, 565);
 }
 
 void LFOToolAudioProcessorEditor::resized()
@@ -676,12 +766,12 @@ void LFOToolAudioProcessorEditor::resized()
         waveformButtons[i].setBounds (waveStartX + static_cast<int> (i) * 49, waveY, waveButtonW, waveButtonH);
 
     curveHintLabel.setBounds (80, 257, 96, 16);
-    const int curveModeY = 274;
-    const int curveButtonW = 76;
+    const int curveModeY = 278;
+    const int curveButtonW = 88;
     for (size_t i = 0; i < curveModeButtons.size(); ++i)
-        curveModeButtons[i].setBounds (80 + static_cast<int> (i) * 83, curveModeY, curveButtonW, 29);
+        curveModeButtons[i].setBounds (80 + static_cast<int> (i) * 96, curveModeY, curveButtonW, 32);
 
-    const int knobY = 300;
+    const int knobY = 325;
     const int knobSize = 62;
     const std::array<int, 4> centres { 92, 218, 344, 470 };
     rateSlider.setBounds   (centres[0] - knobSize / 2, knobY, knobSize, 78);
@@ -689,23 +779,23 @@ void LFOToolAudioProcessorEditor::resized()
     offsetSlider.setBounds (centres[2] - knobSize / 2, knobY, knobSize, 78);
     smoothSlider.setBounds (centres[3] - knobSize / 2, knobY, knobSize, 78);
 
-    rateNameLabel.setBounds   (centres[0] - 36, 356, 72, 14);
-    depthNameLabel.setBounds  (centres[1] - 36, 356, 72, 14);
-    offsetNameLabel.setBounds (centres[2] - 36, 356, 72, 14);
-    smoothNameLabel.setBounds (centres[3] - 36, 356, 72, 14);
+    rateNameLabel.setBounds   (centres[0] - 36, 381, 72, 14);
+    depthNameLabel.setBounds  (centres[1] - 36, 381, 72, 14);
+    offsetNameLabel.setBounds (centres[2] - 36, 381, 72, 14);
+    smoothNameLabel.setBounds (centres[3] - 36, 381, 72, 14);
 
-    rateLabel.setBounds   (centres[0] - 42, 371, 84, 14);
-    depthLabel.setBounds  (centres[1] - 42, 371, 84, 14);
-    offsetLabel.setBounds (centres[2] - 42, 371, 84, 14);
-    smoothLabel.setBounds (centres[3] - 42, 371, 84, 14);
+    rateLabel.setBounds   (centres[0] - 42, 396, 84, 14);
+    depthLabel.setBounds  (centres[1] - 42, 396, 84, 14);
+    offsetLabel.setBounds (centres[2] - 42, 396, 84, 14);
+    smoothLabel.setBounds (centres[3] - 42, 396, 84, 14);
 
-    phaseSlider.setBounds (78, 391, rightX - 120, 28);
-    phaseValueLabel.setBounds (rightX - 56, 395, 50, 14);
+    phaseSlider.setBounds (78, 412, rightX - 120, 28);
+    phaseValueLabel.setBounds (rightX - 56, 416, 50, 14);
 
-    syncCombo.setBounds (78, 424, 178, 34);
+    syncCombo.setBounds (78, 445, 178, 34);
 
-    cvOutSlider.setBounds (78, 542, rightX - 150, 22);
-    cvOutValueLabel.setBounds (rightX - 78, 539, 62, 26);
+    cvOutSlider.setBounds (78, 562, rightX - 150, 22);
+    cvOutValueLabel.setBounds (rightX - 78, 559, 62, 26);
 
     const int rx = rightX + 12;
     levelMeter.setBounds (rx, 73, 166, 27);
@@ -726,6 +816,6 @@ void LFOToolAudioProcessorEditor::resized()
     oneShotButton.setBounds  (rx, 438, 166, 30);
     pingPongButton.setBounds (rx, 472, 166, 30);
 
-    bpmValueLabel.setBounds (rx, 570, 80, 28);
-    stopButton.setBounds (rx + 86, 570, 80, 28);
+    bpmValueLabel.setBounds (rx, 590, 80, 28);
+    stopButton.setBounds (rx + 86, 590, 80, 28);
 }
